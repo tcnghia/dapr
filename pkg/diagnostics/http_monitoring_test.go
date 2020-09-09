@@ -60,6 +60,30 @@ func TestFastHTTPMiddleware(t *testing.T) {
 	assert.True(t, (rows[0].Data).(*view.DistributionData).Min >= 100.0)
 }
 
+func TestFastHTTPMiddlewareWhenNoMetricsRegistered(t *testing.T) {
+	requestBody := "fake_requestDaprBody"
+	responseBody := "fake_responseDaprBody"
+
+	testRequestCtx := fakeFastHTTPRequestCtx(requestBody)
+
+	fakeHandler := func(ctx *fasthttp.RequestCtx) {
+		time.Sleep(100 * time.Millisecond)
+		ctx.Response.SetBodyRaw([]byte(responseBody))
+	}
+
+	// create test httpMetrics
+	testHTTP := newHTTPMetrics()
+
+	handler := testHTTP.FastHTTPMiddleware(fakeHandler)
+
+	// act
+	handler(testRequestCtx)
+
+	// assert
+	_, err := view.RetrieveData("http/server/request_count")
+	assert.Error(t, err)
+}
+
 func TestConvertPathToMethodName(t *testing.T) {
 	var convertTests = []struct {
 		in  string
