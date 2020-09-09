@@ -49,7 +49,8 @@ endif
 define genTestAppImageBuild
 .PHONY: build-e2e-app-$(1)
 build-e2e-app-$(1): check-e2e-env
-	$(DOCKER) build -f $(E2E_TESTAPP_DIR)/$(1)/$(DOCKERFILE) $(E2E_TESTAPP_DIR)/$(1)/. -t $(DAPR_TEST_REGISTRY)/e2e-$(1):$(DAPR_TEST_TAG)
+	GOOS=$(TARGET_OS) GOARCH=$(TARGET_ARCH) go build -o $(E2E_TESTAPP_DIR)/$(1)/app$(BINARY_EXT_LOCAL) $(E2E_TESTAPP_DIR)/$(1)/app.go
+	$(DOCKER) build -f $(E2E_TESTAPP_DIR)/$(DOCKERFILE) $(E2E_TESTAPP_DIR)/$(1)/. -t $(DAPR_TEST_REGISTRY)/e2e-$(1):$(DAPR_TEST_TAG)
 endef
 
 # Generate test app image build targets
@@ -79,6 +80,14 @@ push-perf-app-$(1): check-e2e-env
 	$(DOCKER) push $(DAPR_TEST_REGISTRY)/perf-$(1):$(DAPR_TEST_TAG)
 endef
 
+create-test-namespace:
+	kubectl create namespace $(DAPR_TEST_NAMESPACE)
+
+delete-test-namespace:
+	kubectl delete namespace $(DAPR_TEST_NAMESPACE)
+
+e2e-build-deploy-run: create-test-namespace setup-helm-init setup-test-env-redis setup-test-env-kafka build docker-push docker-deploy-k8s setup-test-components build-e2e-app-all push-e2e-app-all test-e2e-all
+
 # Generate perf app image push targets
 $(foreach ITEM,$(PERF_TEST_APPS),$(eval $(call genPerfAppImagePush,$(ITEM))))
 
@@ -106,7 +115,11 @@ push-perf-app-all: $(PUSH_PERF_APPS_TARGETS)
 
 # start all e2e tests
 test-e2e-all: check-e2e-env
-	DAPR_TEST_NAMESPACE=$(DAPR_TEST_NAMESPACE) DAPR_TEST_TAG=$(DAPR_TEST_TAG) DAPR_TEST_REGISTRY=$(DAPR_TEST_REGISTRY) DAPR_TEST_MINIKUBE_IP=$(MINIKUBE_NODE_IP) go test -p 1 -count=1 -v -tags=e2e ./tests/e2e/...
+	# Note: we can set -p 2 to run two tests apps at a time, because today we do not share state between
+	# tests. In the future, if we add any tests that modify global state (such as dapr config), we'll 
+	# have to be sure and run them after the main test suite, so as not to alter the state of a running
+	# test
+	DAPR_TEST_NAMESPACE=$(DAPR_TEST_NAMESPACE) DAPR_TEST_TAG=$(DAPR_TEST_TAG) DAPR_TEST_REGISTRY=$(DAPR_TEST_REGISTRY) DAPR_TEST_MINIKUBE_IP=$(MINIKUBE_NODE_IP) go test -p 2 -count=1 -v -tags=e2e ./tests/e2e/...
 
 # start all perf tests
 test-perf-all: check-e2e-env
@@ -139,8 +152,9 @@ setup-app-configurations:
 
 # Apply component yaml for state, secrets, pubsub, and bindings
 setup-test-components:
-	$(KUBECTL) apply -f ./tests/config/dapr_redis_state.yaml --namespace $(DAPR_TEST_NAMESPACE)
 	$(KUBECTL) apply -f ./tests/config/kubernetes_secret.yaml --namespace $(DAPR_TEST_NAMESPACE)
+	$(KUBECTL) apply -f ./tests/config/kubernetes_redis_secret.yaml --namespace $(DAPR_TEST_NAMESPACE)
+	$(KUBECTL) apply -f ./tests/config/dapr_redis_state.yaml --namespace $(DAPR_TEST_NAMESPACE)
 	$(KUBECTL) apply -f ./tests/config/dapr_tests_cluster_role_binding.yaml --namespace $(DAPR_TEST_NAMESPACE)
 	$(KUBECTL) apply -f ./tests/config/dapr_redis_pubsub.yaml --namespace $(DAPR_TEST_NAMESPACE)
 	$(KUBECTL) apply -f ./tests/config/dapr_kafka_bindings.yaml --namespace $(DAPR_TEST_NAMESPACE)
