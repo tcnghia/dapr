@@ -10,22 +10,22 @@ import (
 )
 
 const (
-	defaultMetricsPort    = "9090"
-	defaultMetricsEnabled = false
+	defaultMetricsPort            = "9090"
+	defaultMetricsExporterEnabled = true
 )
 
-// Options defines the sets of options for Dapr logging
+// Options defines the sets of options for Dapr metrics
 type Options struct {
-	// OutputLevel is the level of logging
-	MetricsEnabled bool
+	// Enable the metrics exporter
+	MetricsExporterEnabled bool
 
 	metricsPort string
 }
 
 func defaultMetricOptions() *Options {
 	return &Options{
-		metricsPort:    defaultMetricsPort,
-		MetricsEnabled: defaultMetricsEnabled,
+		metricsPort:            defaultMetricsPort,
+		MetricsExporterEnabled: defaultMetricsExporterEnabled,
 	}
 }
 
@@ -50,8 +50,8 @@ func (o *Options) AttachCmdFlags(
 		defaultMetricsPort,
 		"The port for the metrics server")
 	boolVar(
-		&o.MetricsEnabled,
-		"enable-metrics",
-		defaultMetricsEnabled,
-		"Enable prometheus metric")
+		&o.MetricsExporterEnabled,
+		"enable-metrics-exporter",
+		defaultMetricsExporterEnabled,
+		"Enable prometheus metric exporter")
 }

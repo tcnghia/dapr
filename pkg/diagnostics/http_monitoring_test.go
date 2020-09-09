@@ -24,6 +24,7 @@ func TestFastHTTPMiddleware(t *testing.T) {
 	// create test httpMetrics
 	testHTTP := newHTTPMetrics()
 	testHTTP.Init("fakeID")
+	testHTTP.Enable()
 
 	handler := testHTTP.FastHTTPMiddleware(fakeHandler)
 

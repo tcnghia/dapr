@@ -58,7 +58,7 @@ type promMetricsExporter struct {
 
 // Init initializes opencensus exporter
 func (m *promMetricsExporter) Init() error {
-	if !m.exporter.Options().MetricsEnabled {
+	if !m.exporter.Options().MetricsExporterEnabled {
 		return nil
 	}
 
@@ -86,7 +86,7 @@ func (m *promMetricsExporter) Init() error {
 
 // startMetricServer starts metrics server
 func (m *promMetricsExporter) startMetricServer() error {
-	if !m.exporter.Options().MetricsEnabled {
+	if !m.exporter.Options().MetricsExporterEnabled {
 		// skip if metrics is not enabled
 		return nil
 	}

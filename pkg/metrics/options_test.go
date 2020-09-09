@@ -16,7 +16,7 @@ func TestOptions(t *testing.T) {
 	t.Run("default options", func(t *testing.T) {
 		o := defaultMetricOptions()
 		assert.Equal(t, defaultMetricsPort, o.metricsPort)
-		assert.Equal(t, defaultMetricsEnabled, o.MetricsEnabled)
+		assert.Equal(t, defaultMetricsExporterEnabled, o.MetricsExporterEnabled)
 	})
 
 	t.Run("attaching metrics related cmd flags", func(t *testing.T) {
@@ -31,7 +31,7 @@ func TestOptions(t *testing.T) {
 
 		metricsEnabledAsserted := false
 		testBoolVarFn := func(p *bool, name string, value bool, usage string) {
-			if name == "enable-metrics" && value == defaultMetricsEnabled {
+			if name == "enable-metrics-exporter" && value == defaultMetricsExporterEnabled {
 				metricsEnabledAsserted = true
 			}
 		}
@@ -45,8 +45,8 @@ func TestOptions(t *testing.T) {
 
 	t.Run("parse valid port", func(t *testing.T) {
 		o := Options{
-			metricsPort:    "1010",
-			MetricsEnabled: false,
+			metricsPort:            "1010",
+			MetricsExporterEnabled: false,
 		}
 
 		assert.Equal(t, uint64(1010), o.MetricsPort())
@@ -54,8 +54,8 @@ func TestOptions(t *testing.T) {
 
 	t.Run("return default port if port is invalid", func(t *testing.T) {
 		o := Options{
-			metricsPort:    "invalid",
-			MetricsEnabled: false,
+			metricsPort:            "invalid",
+			MetricsExporterEnabled: false,
 		}
 
 		defaultPort, _ := strconv.ParseUint(defaultMetricsPort, 10, 64)

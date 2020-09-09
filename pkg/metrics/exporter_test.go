@@ -33,7 +33,7 @@ func TestMetricsExporter(t *testing.T) {
 
 	t.Run("skip starting metric server", func(t *testing.T) {
 		e := NewExporter("test")
-		e.Options().MetricsEnabled = false
+		e.Options().MetricsExporterEnabled = false
 		err := e.Init()
 		assert.NoError(t, err)
 	})
