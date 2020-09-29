@@ -102,7 +102,8 @@ jobs:
       with:
         config: kind.yaml
         cluster_name: kind
-        
+        version: ${{ matrix.kind-version }}
+
     - name: Get KinD info
       run: |
         kubectl cluster-info --context kind-kind
@@ -121,6 +122,8 @@ jobs:
         
     - name: Setup Helm
       uses: azure/setup-helm@v1
+      with:
+        version: v3.3.4
 
     - name: Build and push Dapr
       run: |
