@@ -2,7 +2,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 # ------------------------------------------------------------
-name: KinD tests
+name: E2E tests on KinD
 
 on:
   pull_request:
