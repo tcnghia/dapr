@@ -14,7 +14,7 @@ defaults:
   run:
     shell: bash
     working-directory: ./src/github.com/dapr/dapr
-    
+
 jobs:
   # This workflow runs our e2e tests in a local KinD cluster. Since it
   # does not required a paid cluster and special credentials, it does
@@ -38,6 +38,7 @@ jobs:
       DAPR_REGISTRY: localhost:5000/dapr
       DAPR_TAG: dev
       DAPR_NAMESPACE: dapr-tests
+      DAPR_E2E_PARALLELISM: 1
     strategy:
       fail-fast: false # Keep running if one leg fails.
       matrix:
@@ -88,6 +89,8 @@ jobs:
           image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
         - role: worker
           image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
+        - role: worker
+          image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
         containerdConfigPatches:
         - |-
           [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:$REGISTRY_PORT"]
@@ -96,7 +99,7 @@ jobs:
 
         # Log the generated kind.yaml for easy reference.
         cat kind.yaml
-      
+
     - name: Create KinD Cluster
       uses: helm/kind-action@v1.0.0
       with:
@@ -119,7 +122,7 @@ jobs:
           -p $REGISTRY_PORT:$REGISTRY_PORT --name $REGISTRY_NAME registry:2
         # Connect the registry to the KinD network.
         docker network connect "kind" $REGISTRY_NAME
-        
+
     - name: Setup Helm
       uses: azure/setup-helm@v1
       with:
@@ -130,12 +133,12 @@ jobs:
         make build-linux
         make docker-build
         make docker-push
-        
+
     - name: Build and push test apps
       run: |
         make build-e2e-app-all
         make push-e2e-app-all
-        
+
     - name: Setup Dapr
       run: |
         make setup-helm-init
@@ -153,7 +156,7 @@ jobs:
     - name: Setup test components
       run: |
         make setup-test-components
-        
+
     - name: Run tests
       run: |
         make test-e2e-all

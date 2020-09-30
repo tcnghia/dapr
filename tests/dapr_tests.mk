@@ -13,6 +13,9 @@ PERF_TEST_APPS=tester service_invocation_http
 # E2E test app root directory
 E2E_TESTAPP_DIR=./tests/apps
 
+# DAPR_TEST_PARALLELISM specifies how many test threads to run. Defaults to 2.
+DAPR_TEST_PARALLELISM ?= 2
+
 # PERFORMANCE test app root directory
 PERF_TESTAPP_DIR=./tests/apps/perf
 
@@ -116,10 +119,10 @@ push-perf-app-all: $(PUSH_PERF_APPS_TARGETS)
 # start all e2e tests
 test-e2e-all: check-e2e-env
 	# Note: we can set -p 2 to run two tests apps at a time, because today we do not share state between
-	# tests. In the future, if we add any tests that modify global state (such as dapr config), we'll 
+	# tests. In the future, if we add any tests that modify global state (such as dapr config), we'll
 	# have to be sure and run them after the main test suite, so as not to alter the state of a running
 	# test
-	GOOS=$(TARGET_OS_LOCAL) DAPR_TEST_NAMESPACE=$(DAPR_TEST_NAMESPACE) DAPR_TEST_TAG=$(DAPR_TEST_TAG) DAPR_TEST_REGISTRY=$(DAPR_TEST_REGISTRY) DAPR_TEST_MINIKUBE_IP=$(MINIKUBE_NODE_IP) go test -p 2 -count=1 -v -tags=e2e ./tests/e2e/...
+	GOOS=$(TARGET_OS_LOCAL) DAPR_TEST_NAMESPACE=$(DAPR_TEST_NAMESPACE) DAPR_TEST_TAG=$(DAPR_TEST_TAG) DAPR_TEST_REGISTRY=$(DAPR_TEST_REGISTRY) DAPR_TEST_MINIKUBE_IP=$(MINIKUBE_NODE_IP) go test -p $(DAPR_E2E_PARALLELISM) -count=1 -v -tags=e2e ./tests/e2e/...
 
 # start all perf tests
 test-perf-all: check-e2e-env
