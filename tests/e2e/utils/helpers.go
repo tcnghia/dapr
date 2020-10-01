@@ -7,7 +7,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -159,17 +158,10 @@ func HTTPGetRawNTimes(url string, n int) (*http.Response, error) {
 // HTTPGetRaw is a helper to make GET request call to url
 func httpGetRaw(url string, t time.Duration) (*http.Response, error) {
 	client := newHTTPClient()
-	var cancel context.CancelFunc
-	ctx := context.Background()
 	if t != 0 {
-		ctx, cancel = context.WithTimeout(ctx, t)
-		defer cancel()
+		client.Timeout = t
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sanitizeHTTPURL(url), nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Do(req)
+	resp, err := client.Get(sanitizeHTTPURL(url))
 	if err != nil {
 		return nil, err
 	}
