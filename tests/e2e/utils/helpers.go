@@ -25,6 +25,9 @@ var (
 	defaultClient http.Client
 )
 
+// DefaultProbeTimeout is the a timeout used in HTTPGetNTimes() and
+// HTTPGetRawNTimes() to avoid cases where early requests hang and
+// block all subsequent requests.
 const DefaultProbeTimeout = 30 * time.Second
 
 // SimpleKeyValue can be used to simplify code, providing simple key-value pairs.
