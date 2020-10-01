@@ -125,7 +125,7 @@ func httpGet(url string, timeout time.Duration) ([]byte, error) {
 
 // HTTPGet is a helper to make GET request call to url
 func HTTPGet(url string) ([]byte, error) {
-	return httpGet(url, 0 /* no timeout */) //nolint
+	return httpGet(url, 0 /* no timeout */)
 }
 
 // HTTPGetRawNTimes calls the url n times and returns the first
@@ -156,9 +156,11 @@ func HTTPGetRawNTimes(url string, n int) (*http.Response, error) {
 // HTTPGetRaw is a helper to make GET request call to url
 func httpGetRaw(url string, t time.Duration) (*http.Response, error) {
 	client := newHTTPClient()
+	var cancel context.CancelFunc
 	ctx := context.Background()
 	if t != 0 {
-		ctx, _ = context.WithTimeout(context.Background(), t)
+		ctx, cancel = context.WithTimeout(ctx, t)
+		defer cancel()
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sanitizeHTTPURL(url), nil)
 	if err != nil {
