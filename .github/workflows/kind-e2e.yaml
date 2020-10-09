@@ -77,7 +77,7 @@ jobs:
         github-token: "foo"
         script: |
           const testPayload = context.payload.client_payload;
-          if (testPayload && testPayload.command == "ok-to-perf") {
+          if (true) {
             var fs = require('fs');
             // Set environment variables
             fs.appendFileSync(process.env.GITHUB_ENV,
