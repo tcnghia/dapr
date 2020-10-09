@@ -91,6 +91,8 @@ jobs:
       run: |
         env
         cat $GITHUB_ENV
+        echo $CHECKOUT_REPO
+        echo $CHECKOUT_REF
     - name: Configure KinD
       # Generate a KinD configuration file that uses:
       # (a) a couple of worker nodes: this is needed to run both
