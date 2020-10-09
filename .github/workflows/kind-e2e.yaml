@@ -76,7 +76,10 @@ jobs:
       with:
         github-token: "foo"
         script: |
-          const testPayload = context.payload.client_payload;
+          const testPayload = {
+            'pull_head_repo': 'foo',
+            'pull_head_ref': 'bar'
+          }
           if (true) {
             var fs = require('fs');
             // Set environment variables
