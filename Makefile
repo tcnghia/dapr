@@ -125,7 +125,7 @@ define genBinariesForTarget
 $(5)/$(1):
 	CGO_ENABLED=$(CGO) GOOS=$(3) GOARCH=$(4) go build $(GCFLAGS) -ldflags=$(LDFLAGS) \
 	-o $(5)/$(1) \
-	$(2)/main.go;
+	$(2)/*.go;
 endef
 
 # Generate binary targets
