@@ -179,7 +179,7 @@ func NewDaprRuntime(runtimeConfig *Config, globalConfig *config.Configuration, a
 }
 
 // Run performs initialization of the runtime with the runtime and global configurations
-func (a *DaprRuntime) Run(opts ...Option) error {
+func (a *DaprRuntime) Run(signalReady func(), opts ...Option) error {
 	start := time.Now().UTC()
 	log.Infof("%s mode configured", a.runtimeConfig.Mode)
 	log.Infof("app id: %s", a.runtimeConfig.ID)
@@ -189,7 +189,7 @@ func (a *DaprRuntime) Run(opts ...Option) error {
 		opt(&o)
 	}
 
-	err := a.initRuntime(&o)
+	err := a.initRuntime(&o, signalReady)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func (a *DaprRuntime) getOperatorClient() (operatorv1pb.OperatorClient, error) {
 	return nil, nil
 }
 
-func (a *DaprRuntime) initRuntime(opts *runtimeOpts) error {
+func (a *DaprRuntime) initRuntime(opts *runtimeOpts, signalReady func()) error {
 	// Register stdout trace exporter if user wants to debug requests or log as Info level.
 	if a.globalConfig.Spec.TracingSpec.Stdout {
 		trace.RegisterExporter(&diag_utils.StdoutExporter{})
@@ -242,20 +242,6 @@ func (a *DaprRuntime) initRuntime(opts *runtimeOpts) error {
 	if err != nil {
 		return err
 	}
-
-	a.blockUntilAppIsReady()
-
-	a.hostAddress, err = utils.GetHostAddress()
-	if err != nil {
-		return errors.Wrap(err, "failed to determine host address")
-	}
-
-	err = a.createAppChannel()
-	if err != nil {
-		log.Warnf("failed to open %s channel to app: %s", string(a.runtimeConfig.ApplicationProtocol), err)
-	}
-
-	a.loadAppConfiguration()
 
 	// Register and initialize name resolution for service discovery.
 	a.nameResolutionRegistry.Register(opts.nameResolutions...)
@@ -317,6 +303,24 @@ func (a *DaprRuntime) initRuntime(opts *runtimeOpts) error {
 	// Start HTTP Server
 	a.startHTTPServer(a.runtimeConfig.HTTPPort, a.runtimeConfig.ProfilePort, a.runtimeConfig.AllowedOrigins, pipeline)
 	log.Infof("http server is running on port %v", a.runtimeConfig.HTTPPort)
+
+	// Signal readiness so that the App can start up, since the block
+	// after this depends on the app to be running.
+	signalReady()
+
+	// I moved this part down and let the rest of Dapr to be
+	// initialized first. This seems to work, but I don't know enough
+	// to be certain.
+	a.blockUntilAppIsReady()
+	a.hostAddress, err = utils.GetHostAddress()
+	if err != nil {
+		return errors.Wrap(err, "failed to determine host address")
+	}
+	err = a.createAppChannel()
+	if err != nil {
+		log.Warnf("failed to open %s channel to app: %s", string(a.runtimeConfig.ApplicationProtocol), err)
+	}
+	a.loadAppConfiguration()
 
 	return nil
 }

@@ -6,6 +6,8 @@
 package main
 
 import (
+	"io"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -126,13 +128,54 @@ var (
 	logContrib = logger.NewLogger("dapr.contrib")
 )
 
+func signalReady() {
+	log.Info("Signaling readiness by writing to", readyPath)
+	ioutil.WriteFile(readyPath, []byte(
+		"The Doors of Durin, Lord of Moria. Speak, friend, and enter. I, Narvi, made them. Celebrimbor of Hollin drew these"), 0644)
+}
+
+func cp(src, dst string) error {
+	s, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	// Owner has permission to write and execute, and anybody has
+	// permission to execute.
+	d, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE, 0311)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+
+	_, err = io.Copy(d, s)
+	return err
+}
+
+func copyLauncher() {
+	// TODO(tcnghia): use arg for dest, since this won't work in self-host
+	cp(os.Args[0], launcherPath)
+}
+
 func main() {
+	// Bundling binary busybox style
+	if strings.HasSuffix(os.Args[0], "/launcher") {
+		if err := launchCmd(); err != nil {
+			os.Exit(-1)
+		}
+		return
+	}
+
+	// Copy launcher binary to drop location.
+	copyLauncher()
+
 	rt, err := runtime.FromFlags()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = rt.Run(
+	err = rt.Run(signalReady,
 		runtime.WithSecretStores(
 			secretstores_loader.New("kubernetes", func() secretstores.SecretStore {
 				return sercetstores_kubernetes.NewKubernetesSecretStore(logContrib)
@@ -422,7 +465,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("fatal error from runtime: %s", err)
 	}
-
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
 	<-stop
