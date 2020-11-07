@@ -146,13 +146,20 @@ test-perf-all: check-e2e-env
 
 # add required helm repo
 setup-helm-init:
-	$(HELM) repo add stable https://kubernetes-charts.storage.googleapis.com/
-	$(HELM) repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+	$(HELM) repo add stable https://charts.helm.sh/stable
+	$(HELM) repo add incubator https://charts.helm.sh/incubator
 	$(HELM) repo update
 
 # install redis to the cluster without password
 setup-test-env-redis:
+ifeq ($(TARGET_ARCH),arm64)
+	sed 's/amd64/arm64/g' -i ./tests/config/redis_override.yaml
+	$(HELM) install dapr-redis stable/redis --wait --timeout 5m0s --namespace $(DAPR_TEST_NAMESPACE) -f ./tests/config/redis_override.yaml \
+		--set image.repository=arm64v8/redis \
+		--set image.tag=5.0.10
+else
 	$(HELM) install dapr-redis stable/redis --wait --timeout 5m0s --namespace $(DAPR_TEST_NAMESPACE) -f ./tests/config/redis_override.yaml
+endif
 
 delete-test-env-redis:
 	${HELM} del dapr-redis --namespace ${DAPR_TEST_NAMESPACE}
@@ -223,7 +230,6 @@ describe-kind-env:
 	export DAPR_TEST_REGISTRY=localhost:5000/dapr\n\
 	export DAPR_TAG=dev\n\
 	export DAPR_NAMESPACE=dapr-tests"
-	
 
 delete-kind:
 	docker stop kind-registry && docker rm kind-registry || echo "Could not delete registry."

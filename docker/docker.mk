@@ -82,7 +82,7 @@ endif
 
 docker-build: check-docker-env check-arch
 	$(info Building $(DOCKER_IMAGE_TAG) docker image ...)
-ifeq ($(TARGET_ARCH),amd64)
+ifeq ($(TARGET_ARCH),arm64)
 	$(DOCKER) build --build-arg PKG_FILES=* -f $(DOCKERFILE_DIR)/$(DOCKERFILE) $(BIN_PATH) -t $(DOCKER_IMAGE_TAG)-$(TARGET_OS)-$(TARGET_ARCH)
 	$(DOCKER) build --build-arg PKG_FILES=daprd -f $(DOCKERFILE_DIR)/$(DOCKERFILE) $(BIN_PATH) -t $(DAPR_RUNTIME_DOCKER_IMAGE_TAG)-$(TARGET_OS)-$(TARGET_ARCH)
 	$(DOCKER) build --build-arg PKG_FILES=placement -f $(DOCKERFILE_DIR)/$(DOCKERFILE) $(BIN_PATH) -t $(DAPR_PLACEMENT_DOCKER_IMAGE_TAG)-$(TARGET_OS)-$(TARGET_ARCH)
@@ -99,7 +99,7 @@ endif
 # push docker image to the registry
 docker-push: docker-build
 	$(info Pushing $(DOCKER_IMAGE_TAG) docker image ...)
-ifeq ($(TARGET_ARCH),amd64)
+ifeq ($(TARGET_ARCH),arm64)
 	$(DOCKER) push $(DOCKER_IMAGE_TAG)-$(TARGET_OS)-$(TARGET_ARCH)
 	$(DOCKER) push $(DAPR_RUNTIME_DOCKER_IMAGE_TAG)-$(TARGET_OS)-$(TARGET_ARCH)
 	$(DOCKER) push $(DAPR_PLACEMENT_DOCKER_IMAGE_TAG)-$(TARGET_OS)-$(TARGET_ARCH)

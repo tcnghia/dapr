@@ -1,0 +1,113 @@
+dist: bionic
+virt: vm
+group: edge
+language: go
+go:
+  - '1.15'
+git:
+  depth: 1
+
+jobs:
+  include:
+   - arch: arm64-graviton2
+   # - arch: amd64
+
+env:
+  REGISTRY_PORT: 5000
+  REGISTRY_NAME: kind-registry
+  DAPR_REGISTRY: localhost:5000/dapr
+  DAPR_TAG: dev
+  DAPR_NAMESPACE: dapr-tests
+  TARGET_ARCH: arm64
+
+script:
+  - eval $(go env)
+  # install kind
+  - curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-${GOARCH}
+  - chmod +x ./kind
+  - sudo mv ./kind /usr/bin
+  # create kind.yaml
+  - |
+    cat > kind.yaml <<EOF
+    kind: Cluster
+    apiVersion: kind.x-k8s.io/v1alpha4
+    nodes:
+    - role: control-plane
+      image: ghcr.io/tcnghia/kindest-arm64/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm64/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm64/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm64/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm64/node:1.19.3
+    containerdConfigPatches:
+     - |-
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:$REGISTRY_PORT"]
+        endpoint = ["http://$REGISTRY_NAME:$REGISTRY_PORT"]
+    EOF
+  # Turn up the cluster
+  - kind create cluster --config kind.yaml
+  # Install kubectl
+  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/arm64/kubectl
+  - chmod +x kubectl
+  - sudo mv kubectl /usr/local/bin/
+  - |
+    kubectl cluster-info --context kind-kind
+    MINIKUBE_NODE_IP=$(kubectl get nodes \
+              -lkubernetes.io/hostname!=kind-control-plane \
+              -ojsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+    export MINIKUBE_NODE_IP
+  # Run a registry.
+  - |
+    docker run -d --restart=always \
+      -p $REGISTRY_PORT:$REGISTRY_PORT --name $REGISTRY_NAME registry:2
+    # Connect the registry to the KinD network.
+    docker network connect "kind" $REGISTRY_NAME
+  # Build and push Dapr
+  - |
+    make build-linux
+    make docker-build
+    make docker-push
+  # Build and push test apps
+  - |
+    make build-e2e-app-all
+    make push-e2e-app-all
+  # Install helm
+  - curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+  # Wait for nodes to be ready
+  - kubectl wait --for=condition=ready --timeout=10m --all nodes
+  # Setup Dapr
+  - |
+    make setup-helm-init
+    make create-test-namespace
+    make docker-deploy-k8s
+    kubectl get pods -n dapr-tests -o wide --show-labels
+  # Setup Redis
+  - |
+    kubectl apply -f tests/config/redis.yaml
+  # Setup test components
+  - |
+    kubectl apply -f ./tests/config/kubernetes_secret.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/kubernetes_secret_config.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/kubernetes_redis_secret.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/dapr_redis_state.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/dapr_tests_cluster_role_binding.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/dapr_redis_pubsub.yaml --namespace $DAPR_NAMESPACE
+    # kubectl apply -f ./tests/config/dapr_kafka_bindings.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/app_topic_subscription_pubsub.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/kubernetes_allowlists_config.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/kubernetes_allowlists_grpc_config.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/dapr_redis_state_badhost.yaml --namespace $DAPR_NAMESPACE
+    kubectl apply -f ./tests/config/dapr_redis_state_badpass.yaml --namespace $DAPR_NAMESPACE
+  # Wait for pods
+  - kubectl wait --for=condition=ready --timeout=10m --all pods --namespace dapr-tests
+  # Run tests
+  - |
+    # We don't have a way to run Kafka yet, so ignore binding tests.
+    rm ./tests/e2e/bindings -rf
+    make test-e2e-all
+
+notifications:
+  email: false
