@@ -1,0 +1,47 @@
+dist: bionic
+language: go
+go:
+  - '1.15'
+git:
+  depth: 1
+
+jobs:
+  include:
+   - arch: arm64
+
+env:
+  REGISTRY_PORT: 5000
+  REGISTRY_NAME: kind-registry
+  DAPR_REGISTRY: localhost:5000/dapr
+  DAPR_TAG: dev
+  DAPR_NAMESPACE: dapr-tests
+
+script:
+  # install kind
+  - curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64
+  - chmod +x ./kind
+  - sudo cp ./kind /usr/bin
+  # create kind.yaml
+  - cat > kind.yaml <<EOF
+    kind: Cluster
+    apiVersion: kind.x-k8s.io/v1alpha4
+    nodes:
+    - role: control-plane
+      image: ghcr.io/tcnghia/kindest-arm/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm/node:1.19.3
+    - role: worker
+      image: ghcr.io/tcnghia/kindest-arm/node:1.19.3
+    containerdConfigPatches:
+    - |-
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:$REGISTRY_PORT"]
+        endpoint = ["http://$REGISTRY_NAME:$REGISTRY_PORT"]
+    EOF
+  # Turn up the cluster
+  - kind create cluster --config kind.yaml
+notifications:
+  email: false
