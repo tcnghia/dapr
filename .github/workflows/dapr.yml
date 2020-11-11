@@ -205,15 +205,15 @@ jobs:
           OWNER_NAME="${GITHUB_REPOSITORY%%/*}"
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
 
-          export GITHUB_TOKEN=${{ secrets.DAPR_BOT_TOKEN }}
-          echo "Uploading Dapr Runtime Binaries to GitHub Release"
-          github-release upload \
-            --owner $OWNER_NAME --repo $REPO_NAME \
-            --tag "v${REL_VERSION}" \
-            --name "Dapr Runtime v${REL_VERSION}" \
-            --body "${RELEASE_BODY}" \
-            --prerelease true \
-            ${RELEASE_ARTIFACT[*]}
+          # export GITHUB_TOKEN=${{ secrets.DAPR_BOT_TOKEN }}
+          # echo "Uploading Dapr Runtime Binaries to GitHub Release"
+          # github-release upload \
+          #   --owner $OWNER_NAME --repo $REPO_NAME \
+          #   --tag "v${REL_VERSION}" \
+          #   --name "Dapr Runtime v${REL_VERSION}" \
+          #   --body "${RELEASE_BODY}" \
+          #   --prerelease true \
+          #   ${RELEASE_ARTIFACT[*]}
       - name: docker login
         run: |
           docker login -u ${{ secrets.DOCKER_REGISTRY_ID }} -p ${{ secrets.DOCKER_REGISTRY_PASS }}
@@ -267,7 +267,7 @@ jobs:
         with:
           repository: ${{ env.DAPR_HELM_REPO }}
           ref: refs/heads/master
-          token: ${{ secrets.DAPR_BOT_TOKEN }}
+          # token: ${{ secrets.DAPR_BOT_TOKEN }}
           path: ${{ env.DAPR_HELM_REPO_CODE_PATH }}
       - name: Upload helm charts to Helm Repo
         env:
