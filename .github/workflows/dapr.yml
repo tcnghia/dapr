@@ -273,7 +273,7 @@ jobs:
               DAPR_HELM_REPO_CODE_PATH: helm-charts
               DAPR_HELM_REPO: https://tcnghia.github.io/helm-charts/
         run: |
-            daprVersion=`cat ${{ env.ARTIFACT_DIR }}/${{ env.HELM_PACKAGE_DIR }}/${{ env.DAPR_VERSION_ARTIFACT }}`
+            daprVersion=$(echo ${{ github.ref }} | sed 's|refs/tags/v||g' )
             cd ${{ env.ARTIFACT_DIR }}/${{ env.HELM_PACKAGE_DIR }}
             cp -r `ls -A | grep -v ${{ env.DAPR_VERSION_ARTIFACT }}` $GITHUB_WORKSPACE/${{ env.DAPR_HELM_REPO_CODE_PATH }}
             cd $GITHUB_WORKSPACE/${{ env.DAPR_HELM_REPO_CODE_PATH }}
