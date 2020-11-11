@@ -272,7 +272,7 @@ jobs:
       - name: Upload helm charts to Helm Repo
         env:
               DAPR_HELM_REPO_CODE_PATH: helm-charts
-              DAPR_HELM_REPO: https://dapr.github.io/helm-charts/
+              DAPR_HELM_REPO: https://tcnghia.github.io/helm-charts/
         run: |
             daprVersion=`cat ${{ env.ARTIFACT_DIR }}/${{ env.HELM_PACKAGE_DIR }}/${{ env.DAPR_VERSION_ARTIFACT }}`
             cd ${{ env.ARTIFACT_DIR }}/${{ env.HELM_PACKAGE_DIR }}
