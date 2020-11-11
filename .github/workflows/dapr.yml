@@ -109,7 +109,6 @@ jobs:
   publish:
     name: Publish docker image and binaries
     needs: build
-    if: github.event_name != 'pull_request'
     env:
       ARTIFACT_DIR: ./release
       HELM_PACKAGE_DIR: helm
@@ -219,7 +218,7 @@ jobs:
         run: |
           docker login -u ${{ secrets.DOCKER_REGISTRY_ID }} -p ${{ secrets.DOCKER_REGISTRY_PASS }}
       - name: Build and push docker multiarch manifest
-        if: matrix.target_os != 'darwin'
+        if: atrix.target_os != 'darwin'
         run: |
           echo "Build docker multiarch image manifest and push it"
           make docker-publish DAPR_REGISTRY=${{ secrets.DOCKER_REGISTRY }} DAPR_TAG=${{ env.REL_VERSION }}
@@ -246,7 +245,6 @@ jobs:
   helmpublish:
     name: Publish helm charts to Helm github pages repo
     needs: publish
-    if: startswith(github.ref, 'refs/tags/v')
     env:
       ARTIFACT_DIR: ./release
       DAPR_VERSION_ARTIFACT: dapr_version
