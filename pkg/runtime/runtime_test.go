@@ -12,10 +12,12 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
+	"contrib.go.opencensus.io/exporter/zipkin"
 	"github.com/dapr/components-contrib/bindings"
 	comp_exporters "github.com/dapr/components-contrib/exporters"
 	"github.com/dapr/components-contrib/pubsub"
@@ -31,6 +33,7 @@ import (
 	state_loader "github.com/dapr/dapr/pkg/components/state"
 	"github.com/dapr/dapr/pkg/config"
 	"github.com/dapr/dapr/pkg/cors"
+	diag_utils "github.com/dapr/dapr/pkg/diagnostics/utils"
 	invokev1 "github.com/dapr/dapr/pkg/messaging/v1"
 	"github.com/dapr/dapr/pkg/modes"
 	runtimev1pb "github.com/dapr/dapr/pkg/proto/runtime/v1"
@@ -45,6 +48,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -338,6 +342,74 @@ func TestInitState(t *testing.T) {
 		assert.Error(t, err, "expected error")
 		assert.Equal(t, assert.AnError.Error(), err.Error(), "expected error strings to match")
 	})
+}
+
+func TestSetupTracing(t *testing.T) {
+	testcases := []struct {
+		name          string
+		tracingConfig config.TracingSpec
+		exporters     []trace.Exporter
+		config        *trace.Config
+	}{{
+		name:          "no trace exporter",
+		tracingConfig: config.TracingSpec{},
+	}, {
+		name: "zipkin trace",
+		tracingConfig: config.TracingSpec{
+			Zipkin: config.ZipkinSpec{
+				EndpointAddress: "http://foo.bar",
+			},
+		},
+		exporters: []trace.Exporter{&zipkin.Exporter{}},
+		config:    &trace.Config{DefaultSampler: trace.AlwaysSample()},
+	}, {
+		name: "stdout trace",
+		tracingConfig: config.TracingSpec{
+			Stdout: true,
+		},
+		exporters: []trace.Exporter{&diag_utils.StdoutExporter{}},
+	}, {
+		name: "all trace",
+		tracingConfig: config.TracingSpec{
+			Zipkin: config.ZipkinSpec{
+				EndpointAddress: "http://foo.bar",
+			},
+			Stdout: true,
+		},
+		exporters: []trace.Exporter{&diag_utils.StdoutExporter{}, &zipkin.Exporter{}},
+		config:    &trace.Config{DefaultSampler: trace.AlwaysSample()},
+	}}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			rt := NewTestDaprRuntime(modes.StandaloneMode)
+			rt.globalConfig.Spec.TracingSpec = tc.tracingConfig
+
+			// Setup tracing with the fake trace exporter store to confirm
+			// the right exporter store is used.
+			exporterStore := &fakeExporterStore{}
+			rt.setupTracing(rt.hostAddress, exporterStore)
+			for i, exporter := range exporterStore.exporters {
+				assert.Equal(t, reflect.TypeOf(tc.exporters[i]), reflect.TypeOf(exporter))
+			}
+			if tc.config == nil {
+				assert.Nil(t, exporterStore.config)
+			} else {
+				traceParams := trace.SamplingParameters{}
+				// There is no way to have equality check for funcs, as even the same
+				// func may be optimized into two different pointers. We perform output
+				// comparison instead, which is the next best thing we can do.
+				assert.Equal(t,
+					tc.config.DefaultSampler(traceParams),
+					exporterStore.config.DefaultSampler(traceParams))
+			}
+
+			// Setup tracing with the OpenCensus global exporter store.
+			// We have no way to validate the result, but we can at least
+			// confim that nothing blows up.
+			rt.setupTracing(rt.hostAddress, openCensusExporterStore{})
+		})
+	}
 }
 
 func TestInitPubSub(t *testing.T) {
