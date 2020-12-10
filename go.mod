@@ -58,4 +58,5 @@ require (
 replace (
 	gopkg.in/couchbaselabs/gocbconnstr.v1 => github.com/couchbaselabs/gocbconnstr v1.0.5
 	k8s.io/client => github.com/kubernetes-client/go v0.0.0-20190928040339-c757968c4c36
+	github.com/dapr/components-contrib => github.com/tcnghia/components-contrib v0.3.1-0.20201210210042-4c9e75b46849
 )
