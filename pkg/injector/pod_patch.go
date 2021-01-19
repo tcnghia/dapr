@@ -220,7 +220,7 @@ func addDaprCopyLauncherInitContainer(spec corev1.PodSpec, image string, pullPol
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      varDaprVolume,
-				ReadOnly:  true,
+				ReadOnly:  false,
 				MountPath: varDapr,
 			},
 		},
@@ -256,20 +256,34 @@ func useLauncherForCommand(containers []corev1.Container) []PatchOperation {
 				Value: "/var/dapr/launcher",
 			})
 		} else {
+			cmd, err := unpackImageCommand(container.Image)
+			if err != nil {
+				log.Errorf("Failed to unpack command: %s", container.Image)
+				continue
+			}
 			// The not-so-easy case, where we need to crack open the container image to find out.
 			patchOps = append(patchOps, PatchOperation{
 				Op:    "replace",
 				Path:  fmt.Sprintf("%s/%d/command", containersPath, i),
-				Value: unpackImageCommand(container.Image),
+				Value: cmd,
 			})
 		}
 	}
 	return patchOps
 }
 
-// TODO(nghia): Crack open the container image and get the command
-func unpackImageCommand(image string) []string {
-	return nil
+func unpackImageCommand(image string) ([]string, error) {
+	i, _, err := getImage(image)
+
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := i.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	cmd := []string{"/var/dapr/launcher"}
+	return append(append(cmd, cfg.Config.Entrypoint...), cfg.Config.Cmd...), nil
 }
 
 // This function add Dapr environment variables to all the containers in any Dapr enabled pod.

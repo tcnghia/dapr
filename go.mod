@@ -13,6 +13,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.3
 	github.com/google/go-cmp v0.5.2
+	github.com/google/go-containerregistry v0.4.0
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.7.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
@@ -50,7 +51,7 @@ require (
 	k8s.io/apimachinery v0.20.0
 	k8s.io/cli-runtime v0.20.0
 	k8s.io/client-go v0.20.0
-	k8s.io/code-generator v0.20.0
+	k8s.io/code-generator v0.20.1
 	k8s.io/klog v1.0.0
 	k8s.io/metrics v0.20.0
 	sigs.k8s.io/controller-runtime v0.7.0
