@@ -21,4 +21,6 @@ spec:
       - name: python
         image: dapriosamples/hello-k8s-python:latest
         command:
+        - "python"
+        args:
         - "app.py"

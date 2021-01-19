@@ -158,7 +158,7 @@ func main() {
 	// Bundling binary busybox style
 	if strings.HasSuffix(os.Args[0], "/launcher") {
 		if err := launchCmd(); err != nil {
-			os.Exit(-1)
+			log.Fatal(err)
 		}
 		return
 	}
