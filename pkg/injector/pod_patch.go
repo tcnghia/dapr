@@ -181,6 +181,7 @@ func (i *injector) getPodPatchOperations(ar *v1.AdmissionReview,
 	)
 	patchOps = append(patchOps, envPatchOps...)
 	patchOps = append(patchOps, addVarDaprVolumeMount(pod.Spec.Containers)...)
+	patchOps = append(patchOps, addDaprCopyLauncherInitContainer(pod.Spec, image, imagePullPolicy))
 	patchOps = append(patchOps, useLauncherForCommand(pod.Spec.Containers)...)
 
 	return patchOps, nil
@@ -201,6 +202,46 @@ func addVarDaprVolumeMount(containers []corev1.Container) []PatchOperation {
 		})
 	}
 	return patchOps
+}
+
+func addDaprCopyLauncherInitContainer(spec corev1.PodSpec, image string, pullPolicy string) PatchOperation {
+	allowPrivilegeEscalation := false
+	container := corev1.Container{
+		Name:            "dapr-copy-launcher",
+		Image:           image,
+		ImagePullPolicy: getPullPolicy(pullPolicy),
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+		},
+		Command: []string{"/daprd"},
+		Args: []string{
+			"--copy-launcher", "/var/dapr/launcher",
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      varDaprVolume,
+				ReadOnly:  true,
+				MountPath: varDapr,
+			},
+		},
+	}
+
+	// need to handle the cases differently when there's already an initcontainer defined
+	// - if initcontainer(s) is in use, we need to append
+	// - if initcontainers are not in use, we need to provide the whole array
+	if len(spec.InitContainers) == 0 {
+		return PatchOperation{
+			Op:    "add",
+			Path:  "/spec/initContainers",
+			Value: []corev1.Container{container},
+		}
+	} else {
+		return PatchOperation{
+			Op:    "add",
+			Path:  "/spec/initContainers/-",
+			Value: container,
+		}
+	}
 }
 
 // Use the launcher command.

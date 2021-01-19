@@ -22,8 +22,7 @@ import (
 // itself. Yuck.
 
 const (
-	varDapr      = "/var/dapr"
-	launcherPath = varDapr + "/launcher"
+	varDapr = "/var/dapr"
 	// Ideally this should be a socket, and we can use HTTP over
 	// Unix socket to communicate intelligently with the sidecar.
 	//

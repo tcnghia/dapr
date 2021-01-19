@@ -148,10 +148,13 @@ func cp(src, dst string) error {
 	return err
 }
 
-func copyLauncher() {
-	// TODO(tcnghia): use arg for dest, since this won't work in self-host
-	cp(os.Args[0], launcherPath)
-	log.Info("launcher is copied to " + launcherPath)
+func copyLauncher(src, dst string) error {
+	err := cp(src, dst)
+	if err != nil {
+		return err
+	}
+	log.Info("launcher is copied to " + dst)
+	return nil
 }
 
 func main() {
@@ -163,8 +166,13 @@ func main() {
 		return
 	}
 
-	// Copy launcher binary to drop location.
-	copyLauncher()
+	if len(os.Args) >= 3 && os.Args[1] == "--copy-launcher" {
+		// Copy daprd (this program) to the launcher location passed as an arg
+		if err := copyLauncher(os.Args[0], os.Args[2]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	rt, err := runtime.FromFlags()
 	if err != nil {
