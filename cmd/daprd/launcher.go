@@ -32,7 +32,6 @@ const (
 )
 
 func launchCmd() error {
-	cmd := exec.Command(os.Args[1], os.Args[2:]...)
 	log.Infof("Waiting for Dapr to be ready...")
 	for {
 		f, err := os.Open(readyPath)
@@ -44,7 +43,10 @@ func launchCmd() error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	log.Info("Mellon means friend in Sindarin")
+	log.Info("Dapr is READY")
+	cmd := exec.Command(os.Args[1], os.Args[2:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	log.Infof("Launching container with command %+v...", cmd)
 	return cmd.Run()
 }
