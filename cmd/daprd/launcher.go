@@ -31,6 +31,7 @@ const (
 )
 
 func launchCmd() error {
+	log.Infof("--- APP LAUNCHER log ---\n")
 	log.Infof("Waiting for Dapr to be ready...")
 	for {
 		f, err := os.Open(readyPath)
@@ -42,10 +43,11 @@ func launchCmd() error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	log.Info("Dapr is READY")
+	log.Info("\n--- DAPRD is READY ---\n")
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Infof("Launching container with command %+v...", cmd)
+	log.Info("\n--- APP log --- ")
 	return cmd.Run()
 }
