@@ -33,23 +33,23 @@ const (
 
 func launchCmd() error {
 	fmt.Println("--- APP LAUNCHER log ---")
-	fmt.Println("Waiting for Dapr to be ready...")
+	log.Info("Waiting for Dapr to be ready...")
 	for {
 		f, err := os.Open(readyPath)
 		if err == nil {
 			f.Close()
 			message, _ := ioutil.ReadFile(readyPath)
-			fmt.Println("Received message from sidecar:", string(message))
+			log.Info("Received message from sidecar:", string(message))
 			break
 		}
 		fmt.Println(".")
 		time.Sleep(100 * time.Millisecond)
 	}
-	fmt.Println("Dapr is ready")
+	log.Info("Dapr is ready")
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	fmt.Printf("Launching container with command %+v\n", cmd)
+	log.Infof("Launching container with command %+v\n", cmd)
 	fmt.Println("\n--- APP log --- ")
 	return cmd.Run()
 }
