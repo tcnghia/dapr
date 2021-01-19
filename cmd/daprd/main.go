@@ -204,6 +204,9 @@ func main() {
 			}),
 		),
 		runtime.WithStates(
+			state_loader.New("slowboi", func() state.Store {
+				return state_loader.NewSlowStateStore(logContrib)
+			}),
 			state_loader.New("redis", func() state.Store {
 				return state_redis.NewRedisStateStore(logContrib)
 			}),
