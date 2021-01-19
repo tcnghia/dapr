@@ -83,6 +83,10 @@ const (
 	apiVersionV1                      = "v1.0"
 	defaultMtlsEnabled                = true
 	trueString                        = "true"
+
+	// launcher stuffs
+	varDapr       = "/var/dapr"
+	varDaprVolume = "dapr-launcher"
 )
 
 func (i *injector) getPodPatchOperations(ar *v1.AdmissionReview,
@@ -140,7 +144,21 @@ func (i *injector) getPodPatchOperations(ar *v1.AdmissionReview,
 		return nil, err
 	}
 
-	patchOps := []PatchOperation{}
+	patchOps := []PatchOperation{
+		// Add the "/var/dapr" volume to house the launcher, and also
+		// house a file/socket to communicate Dapr readines with the app.
+		{
+			Op:   "add",
+			Path: "/spec/volumes/-",
+
+			Value: corev1.Volume{
+				Name: varDaprVolume,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		},
+	}
 	envPatchOps := []PatchOperation{}
 	var path string
 	var value interface{}
@@ -162,8 +180,55 @@ func (i *injector) getPodPatchOperations(ar *v1.AdmissionReview,
 		},
 	)
 	patchOps = append(patchOps, envPatchOps...)
+	patchOps = append(patchOps, addVarDaprVolumeMount(pod.Spec.Containers)...)
+	patchOps = append(patchOps, useLauncherForCommand(pod.Spec.Containers)...)
 
 	return patchOps, nil
+}
+
+// Mount the "/var/dapr" volume into each container as a readonly volume.
+func addVarDaprVolumeMount(containers []corev1.Container) []PatchOperation {
+	patchOps := []PatchOperation{}
+	for i := range containers {
+		patchOps = append(patchOps, PatchOperation{
+			Op:   "add",
+			Path: fmt.Sprintf("%s/%d/volumeMounts/-", containersPath, i),
+			Value: corev1.VolumeMount{
+				Name:      varDaprVolume,
+				ReadOnly:  true,
+				MountPath: varDapr,
+			},
+		})
+	}
+	return patchOps
+}
+
+// Use the launcher command.
+func useLauncherForCommand(containers []corev1.Container) []PatchOperation {
+	patchOps := []PatchOperation{}
+	for i, container := range containers {
+		if len(container.Command) > 0 {
+			// The easy case, we only prepend "/var/dapr/launcher", and we're done.
+			patchOps = append(patchOps, PatchOperation{
+				Op:    "add",
+				Path:  fmt.Sprintf("%s/%d/command/0", containersPath, i),
+				Value: "/var/dapr/launcher",
+			})
+		} else {
+			// The not-so-easy case, where we need to crack open the container image to find out.
+			patchOps = append(patchOps, PatchOperation{
+				Op:    "replace",
+				Path:  fmt.Sprintf("%s/%d/command", containersPath, i),
+				Value: unpackImageCommand(container.Image),
+			})
+		}
+	}
+	return patchOps
+}
+
+// TODO(nghia): Crack open the container image and get the command
+func unpackImageCommand(image string) []string {
+	return nil
 }
 
 // This function add Dapr environment variables to all the containers in any Dapr enabled pod.
@@ -557,11 +622,13 @@ func getSidecarContainer(annotations map[string]string, id, daprSidecarImage, im
 			FailureThreshold:    getInt32AnnotationOrDefault(annotations, daprLivenessProbeThresholdKey, defaultHealthzProbeThreshold),
 		},
 	}
-
+	c.VolumeMounts = []corev1.VolumeMount{{
+		Name:      varDaprVolume,
+		ReadOnly:  false,
+		MountPath: varDapr,
+	}}
 	if tokenVolumeMount != nil {
-		c.VolumeMounts = []corev1.VolumeMount{
-			*tokenVolumeMount,
-		}
+		c.VolumeMounts = append(c.VolumeMounts, *tokenVolumeMount)
 	}
 
 	if logAsJSONEnabled(annotations) {

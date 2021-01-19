@@ -186,7 +186,7 @@ func NewDaprRuntime(runtimeConfig *Config, globalConfig *config.Configuration, a
 }
 
 // Run performs initialization of the runtime with the runtime and global configurations
-func (a *DaprRuntime) Run(opts ...Option) error {
+func (a *DaprRuntime) Run(signalReady func(), opts ...Option) error {
 	start := time.Now().UTC()
 	log.Infof("%s mode configured", a.runtimeConfig.Mode)
 	log.Infof("app id: %s", a.runtimeConfig.ID)
@@ -196,7 +196,7 @@ func (a *DaprRuntime) Run(opts ...Option) error {
 		opt(&o)
 	}
 
-	err := a.initRuntime(&o)
+	err := a.initRuntime(&o, signalReady)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (a *DaprRuntime) setupTracing(hostAddress string, exporters traceExporterSt
 	return nil
 }
 
-func (a *DaprRuntime) initRuntime(opts *runtimeOpts) error {
+func (a *DaprRuntime) initRuntime(opts *runtimeOpts, signalReady func()) error {
 	// Initialize metrics only if MetricSpec is enabled.
 	if a.globalConfig.Spec.MetricSpec.Enabled {
 		if err := diag.InitMetrics(a.runtimeConfig.ID); err != nil {
@@ -328,6 +328,12 @@ func (a *DaprRuntime) initRuntime(opts *runtimeOpts) error {
 		log.Fatalf("failed to start internal gRPC server: %s", err)
 	}
 	log.Infof("internal gRPC server is running on port %v", a.runtimeConfig.InternalGRPCPort)
+
+	a.stateStoreRegistry.Register(opts.states...)
+
+	// Signal readiness so that the App can start up, since the block
+	// after this depends on the app to be running.
+	signalReady()
 
 	a.blockUntilAppIsReady()
 
