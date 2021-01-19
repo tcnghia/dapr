@@ -1,0 +1,11 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: slowstatestore
+  namespace: default
+spec:
+  type: state.slowboi
+  version: v1
+  metadata:
+  - name: delay
+    value: 4
