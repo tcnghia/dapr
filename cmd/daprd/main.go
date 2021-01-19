@@ -151,6 +151,7 @@ func cp(src, dst string) error {
 func copyLauncher() {
 	// TODO(tcnghia): use arg for dest, since this won't work in self-host
 	cp(os.Args[0], launcherPath)
+	log.Info("launcher is copied to " + launcherPath)
 }
 
 func main() {
