@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -31,23 +32,24 @@ const (
 )
 
 func launchCmd() error {
-	log.Infof("--- APP LAUNCHER log ---\n")
-	log.Infof("Waiting for Dapr to be ready...")
+	fmt.Println("--- APP LAUNCHER log ---")
+	fmt.Println("Waiting for Dapr to be ready...")
 	for {
 		f, err := os.Open(readyPath)
 		if err == nil {
 			f.Close()
 			message, _ := ioutil.ReadFile(readyPath)
-			log.Infof("Dapr says %q", string(message))
+			fmt.Println("Received message from sidecar:", string(message))
 			break
 		}
-		time.Sleep(50 * time.Millisecond)
+		fmt.Println(".")
+		time.Sleep(100 * time.Millisecond)
 	}
-	log.Info("\n--- DAPRD is READY ---\n")
+	fmt.Println("Dapr is ready")
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	log.Infof("Launching container with command %+v...", cmd)
-	log.Info("\n--- APP log --- ")
+	fmt.Printf("Launching container with command %+v\n", cmd)
+	fmt.Println("\n--- APP log --- ")
 	return cmd.Run()
 }
